@@ -35,21 +35,47 @@ async function run() {
       const query = {};
       const option = await appoinmentOptionsCollection.find(query).toArray();
       const appoinmentDate = { appoinmentDate: date };
-      const bkingCollection = await bookingCollection.find(appoinmentDate).toArray();
+      const bkingCollection = await bookingCollection
+        .find(appoinmentDate)
+        .toArray();
 
-      option.forEach(opt=>{
-         const matchName = bkingCollection.filter(bking=>bking.treatment === opt.name);
-         const matchSlots = matchName.map(book=>book.slot);
-         const remainingSlots = opt.slots.filter(ot=>!matchSlots.includes(ot));
-         opt.slots = remainingSlots;
-      })
+      option.forEach((opt) => {
+        const matchName = bkingCollection.filter(
+          (bking) => bking.treatment === opt.name
+        );
+        const matchSlots = matchName.map((book) => book.slot);
+        const remainingSlots = opt.slots.filter(
+          (ot) => !matchSlots.includes(ot)
+        );
+        opt.slots = remainingSlots;
+      });
       res.send(option);
     });
 
     //booking post
     app.post("/booking", async (req, res) => {
       const booking = req.body;
+      const query = {
+        $and: [
+          { email: booking.email },
+          { appoinmentDate: booking.appoinmentDate },
+          { treatment: booking.treatment },
+        ],
+      };
+      const alreadyBooked = await bookingCollection.find(query).toArray();
+      if (alreadyBooked.length) {
+        const message = `You already have a booking on ${booking.appoinmentDate}`;
+        return res.send({ acknowledged: false, message });
+      }
       const result = await bookingCollection.insertOne(booking);
+      res.send(result);
+    });
+
+    //MyAppoinment
+    app.get("/myAppoinment", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
   } finally {
