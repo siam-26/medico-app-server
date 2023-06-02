@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -28,6 +29,8 @@ async function run() {
     const bookingCollection = client
       .db("MedicoApp")
       .collection("bookingCollection");
+
+    const userCollection = client.db("MedicoApp").collection("users");
 
     //appoinment options
     app.get("/appoinmentOptions", async (req, res) => {
@@ -78,6 +81,26 @@ async function run() {
       const result = await bookingCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.get("/jwt", async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      if (user) {
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
+          expiresIn: "1h",
+        });
+        return res.send({accessToken:token});
+      }
+      res.status(403).send({ accessToken: ''});
+    });
+
+    // users
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
   } finally {
   }
 }
@@ -88,3 +111,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => console.log(`MedicoApp running on ${port}`));
+
+//require('crypto').randomBytes(64).toString('hex')......to generate a token
