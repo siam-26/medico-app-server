@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -31,8 +31,8 @@ function verifyJwt(req, res, next) {
   const token = authHeader.split(" ")[1];
 
   jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
-    if(err){
-     return res.status(401).send({message:'forbidden access'});
+    if (err) {
+      return res.status(401).send({ message: "forbidden access" });
     }
 
     req.decoded = decoded;
@@ -97,8 +97,8 @@ async function run() {
     app.get("/myAppoinment", verifyJwt, async (req, res) => {
       const email = req.query.email;
       const decodedEmail = req.decoded.email;
-      if(email !== decodedEmail){
-        return res.status(403).send({message:"forbidden access"});
+      if (email !== decodedEmail) {
+        return res.status(403).send({ message: "forbidden access" });
       }
       const query = { email: email };
       const result = await bookingCollection.find(query).toArray();
@@ -122,6 +122,37 @@ async function run() {
     app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    //get all users
+    app.get("/users", async (req, res) => {
+      const query = {};
+      const users = await userCollection.find(query).toArray();
+      res.send(users);
+    });
+
+    // admin
+    app.put("/users/admin/:id", verifyJwt, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const admin = await userCollection.findOne(query);
+      if (admin.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await userCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
       res.send(result);
     });
   } finally {
