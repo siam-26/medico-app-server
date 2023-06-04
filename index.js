@@ -161,6 +161,16 @@ async function run() {
       const user = await userCollection.findOne(query);
       res.send({ isAdmin: user?.role === "admin" });
     });
+
+    //specialty
+    app.get("/specialty", async (req, res) => {
+      const query = {};
+      const result = await appoinmentOptionsCollection
+        .find(query)
+        .project({ name: 1 })
+        .toArray();
+      res.send(result);
+    });
   } finally {
   }
 }
