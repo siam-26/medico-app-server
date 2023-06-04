@@ -110,9 +110,7 @@ async function run() {
       const query = { email: email };
       const user = await userCollection.findOne(query);
       if (user) {
-        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-          expiresIn: "1h",
-        });
+        const token = jwt.sign({ email }, process.env.ACCESS_TOKEN);
         return res.send({ accessToken: token });
       }
       res.status(403).send({ accessToken: "" });
@@ -154,6 +152,14 @@ async function run() {
         options
       );
       res.send(result);
+    });
+
+    //get admin user
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await userCollection.findOne(query);
+      res.send({ isAdmin: user?.role === "admin" });
     });
   } finally {
   }
