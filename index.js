@@ -50,6 +50,7 @@ async function run() {
       .collection("bookingCollection");
 
     const userCollection = client.db("MedicoApp").collection("users");
+    const doctorsCollection = client.db("MedicoApp").collection("doctors");
 
     //appoinment options
     app.get("/appoinmentOptions", async (req, res) => {
@@ -170,6 +171,13 @@ async function run() {
         .project({ name: 1 })
         .toArray();
       res.send(result);
+    });
+
+    //doctors
+    app.post("/doctors", async (req, res) => {
+      const query = req.body;
+      const doctors = await doctorsCollection.insertOne(query);
+      res.send(doctors);
     });
   } finally {
   }
