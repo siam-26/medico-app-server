@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId, Admin } = require("mongodb");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
 
@@ -51,6 +51,17 @@ async function run() {
 
     const userCollection = client.db("MedicoApp").collection("users");
     const doctorsCollection = client.db("MedicoApp").collection("doctors");
+
+    //admin Jwt
+    const verifyAdminJwt = async (req, res, next) => {
+      const decodeEmail = req.decoded.email;
+      const email = { email: decodeEmail };
+      const user = await userCollection.findOne(email);
+      if (user.role !== "admin") {
+        return res.status(401).send({ message: "forbidden access" });
+      }
+      next();
+    };
 
     //appoinment options
     app.get("/appoinmentOptions", async (req, res) => {
@@ -117,6 +128,14 @@ async function run() {
       res.status(403).send({ accessToken: "" });
     });
 
+    //get specific my appoinment
+    app.get("/myAppoinment/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.findOne(query);
+      res.send(result);
+    });
+
     // users
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -132,13 +151,7 @@ async function run() {
     });
 
     // admin
-    app.put("/users/admin/:id", verifyJwt, async (req, res) => {
-      const decodedEmail = req.decoded.email;
-      const query = { email: decodedEmail };
-      const admin = await userCollection.findOne(query);
-      if (admin.role !== "admin") {
-        return res.status(403).send({ message: "forbidden access" });
-      }
+    app.put("/users/admin/:id", verifyJwt, verifyAdminJwt, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const options = { upsert: true };
@@ -148,6 +161,23 @@ async function run() {
         },
       };
       const result = await userCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    // add Price
+    app.get("/addPrice", async (req, res) => {
+      const filter = {};
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          price: 99,
+        },
+      };
+      const result = await appoinmentOptionsCollection.updateMany(
         filter,
         updatedDoc,
         options
@@ -174,10 +204,25 @@ async function run() {
     });
 
     //doctors
-    app.post("/doctors", async (req, res) => {
+    app.get("/doctors", verifyJwt, verifyAdminJwt, async (req, res) => {
+      const query = {};
+      const doctors = await doctorsCollection.find(query).toArray();
+      res.send(doctors);
+    });
+
+    //doctors
+    app.post("/doctors", verifyJwt, async (req, res) => {
       const query = req.body;
       const doctors = await doctorsCollection.insertOne(query);
       res.send(doctors);
+    });
+
+    //remove doctor
+    app.delete("/doctors/:id", verifyJwt, verifyAdminJwt, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await doctorsCollection.deleteOne(query);
+      res.send(result);
     });
   } finally {
   }
