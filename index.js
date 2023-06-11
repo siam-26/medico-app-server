@@ -170,6 +170,14 @@ async function run() {
       res.send(result);
     });
 
+    //delete user
+    app.delete("/users/admin/delete/:id",verifyJwt,verifyAdminJwt,async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id:new ObjectId(id)};
+      const deleteUser = await userCollection.deleteOne(filter);
+      res.send(deleteUser);
+    })
+
     // add Price
     app.get("/addPrice", async (req, res) => {
       const filter = {};
